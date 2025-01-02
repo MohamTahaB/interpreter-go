@@ -35,8 +35,20 @@ const (
 	LET      = "LET"
 )
 
-// Helper function that takes as parameter a token type and its corresponding char in the case of EOF, operators, delimiters, parenthesis and braces, and returns the corresponding Token instance.
-func NewToken(tokenType TokenType, ch byte) Token {
+var ONE_CHAR_TOKEN_LITTERALS map[byte]bool = map[byte]bool{
+	'=': true,
+	'+': true,
+	';': true,
+	',': true,
+	'(': true,
+	')': true,
+	'{': true,
+	'}': true,
+	0:   true,
+}
+
+// Helper function that takes as parameter a token type and its corresponding char slice, and returns the corresponding Token instance.
+func NewToken(tokenType TokenType, ch []byte) Token {
 	return Token{
 		Type:    tokenType,
 		Literal: string(ch),
@@ -73,4 +85,21 @@ func CharToToken(ch byte) TokenType {
 	}
 
 	return tt
+}
+
+func LegalOneCharLiteral(ch byte) bool {
+	return ONE_CHAR_TOKEN_LITTERALS[ch]
+}
+
+var keywords = map[string]TokenType{
+	"fn":  FUNCTION,
+	"let": LET,
+}
+
+func LookupIdent(ident string) TokenType {
+	if tok, ok := keywords[ident]; ok {
+		return tok
+	}
+
+	return IDENT
 }

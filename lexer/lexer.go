@@ -13,12 +13,12 @@ type Lexer struct {
 
 func New(input string) *Lexer {
 	l := &Lexer{input: input}
-	l.ReadChar()
+	l.readChar()
 	return l
 }
 
 // Helper function to update the position of the considered char in the Lexer instance.
-func (l *Lexer) ReadChar() {
+func (l *Lexer) readChar() {
 	if l.readPosition >= len(l.input) {
 		l.ch = 0
 	} else {
@@ -31,7 +31,58 @@ func (l *Lexer) ReadChar() {
 
 // Returns the next token the Lexer instance points to.
 func (l *Lexer) NextToken() token.Token {
-	tok := token.NewToken(token.CharToToken(l.ch), l.ch)
-	l.ReadChar()
+	var tok token.Token
+
+	l.skipWhiteSpace()
+
+	switch {
+	case token.LegalOneCharLiteral(l.ch):
+		tok = token.NewToken(token.CharToToken(l.ch), []byte{l.ch})
+	default:
+		if isLetter(l.ch) {
+			tok.Literal = l.readIdentifier()
+			tok.Type = token.LookupIdent(tok.Literal)
+			return tok
+		} else if isDigit(l.ch) {
+			tok.Literal = l.readNumber()
+			tok.Type = token.INT
+			return tok
+		} else {
+			tok = token.NewToken(token.ILLEGAL, []byte{l.ch})
+		}
+	}
+	l.readChar()
 	return tok
+}
+
+func (l *Lexer) readIdentifier() string {
+	position := l.position
+	for isLetter(l.ch) {
+		l.readChar()
+	}
+
+	return l.input[position:l.position]
+}
+
+func (l *Lexer) readNumber() string {
+	position := l.position
+	for isDigit(l.ch) {
+		l.readChar()
+	}
+
+	return l.input[position:l.position]
+}
+
+func (l *Lexer) skipWhiteSpace() {
+	for l.ch == ' ' || l.ch == '\n' || l.ch == '\t' || l.ch == '\r' {
+		l.readChar()
+	}
+}
+
+func isLetter(ch byte) bool {
+	return 'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z' || ch == '_'
+}
+
+func isDigit(ch byte) bool {
+	return '0' <= ch && ch <= '9'
 }
