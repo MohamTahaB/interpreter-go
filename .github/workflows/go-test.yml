@@ -22,4 +22,4 @@ jobs:
           go-version-file: go.mod
 
       - name: Test
-        run: robherley/go-test-action@v0
+        uses: robherley/go-test-action@v0
