@@ -17,7 +17,7 @@ const (
 	IDENT = "IDENT"
 	INT   = "INT"
 
-	// Operators
+	// Operators (one char)
 	ASSIGN = "="
 	PLUS   = "+"
 	MINUS  = "-"
@@ -26,6 +26,16 @@ const (
 	LT     = "<"
 	GT     = ">"
 	NEG    = "!"
+
+	// Operators (two chars)
+	EQ      = "=="
+	NEQ     = "!="
+	LEQ     = "<="
+	GEQ     = ">="
+	PLUSEQ  = "+="
+	MINUSEQ = "-="
+	SLASHEQ = "/="
+	TIMESEQ = "*="
 
 	// Delimiters
 	COMMA     = ","

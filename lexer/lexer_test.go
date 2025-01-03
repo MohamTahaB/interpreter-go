@@ -62,6 +62,16 @@ func TestNextToken_OK(t *testing.T) {
 	} else {
 		return false;
 	}
+
+	10 == 10;
+	10 != 10;
+	10 <= 10;
+	10 >= 10;
+
+	five += 5;
+	five -= 5;
+	five *= 5;
+	five /= 5;
 	`
 
 	l := New(input)
@@ -132,6 +142,38 @@ func TestNextToken_OK(t *testing.T) {
 		{token.FALSE, "false"},
 		{token.SEMICOLON, ";"},
 		{token.RBRACE, "}"},
+		{token.INT, "10"},
+		{token.EQ, "=="},
+		{token.INT, "10"},
+		{token.SEMICOLON, ";"},
+		{token.INT, "10"},
+		{token.NEQ, "!="},
+		{token.INT, "10"},
+		{token.SEMICOLON, ";"},
+		{token.INT, "10"},
+		{token.LEQ, "<="},
+		{token.INT, "10"},
+		{token.SEMICOLON, ";"},
+		{token.INT, "10"},
+		{token.GEQ, ">="},
+		{token.INT, "10"},
+		{token.SEMICOLON, ";"},
+		{token.IDENT, "five"},
+		{token.PLUSEQ, "+="},
+		{token.INT, "5"},
+		{token.SEMICOLON, ";"},
+		{token.IDENT, "five"},
+		{token.MINUSEQ, "-="},
+		{token.INT, "5"},
+		{token.SEMICOLON, ";"},
+		{token.IDENT, "five"},
+		{token.TIMESEQ, "*="},
+		{token.INT, "5"},
+		{token.SEMICOLON, ";"},
+		{token.IDENT, "five"},
+		{token.SLASHEQ, "/="},
+		{token.INT, "5"},
+		{token.SEMICOLON, ";"},
 		{token.EOF, "\x00"},
 	}
 

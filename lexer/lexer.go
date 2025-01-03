@@ -29,6 +29,14 @@ func (l *Lexer) readChar() {
 	l.readPosition++
 }
 
+// Helper function to peek into the readPosition char without reading.
+func (l *Lexer) peekChar() byte {
+	if l.readPosition >= len(l.input) {
+		return 0
+	}
+	return l.input[l.readPosition]
+}
+
 // Returns the next token the Lexer instance points to.
 func (l *Lexer) NextToken() token.Token {
 	var tok token.Token
@@ -37,7 +45,39 @@ func (l *Lexer) NextToken() token.Token {
 
 	switch {
 	case token.LegalOneCharLiteral(l.ch):
-		tok = token.NewToken(token.CharToToken(l.ch), []byte{l.ch})
+
+		var tokType token.TokenType
+		var tokenBytes []byte = []byte{l.ch}
+		twoCharsToken := true
+
+		switch {
+		case l.ch == '!' && l.peekChar() == '=':
+			tokType = token.NEQ
+		case l.ch == '=' && l.peekChar() == '=':
+			tokType = token.EQ
+		case l.ch == '<' && l.peekChar() == '=':
+			tokType = token.LEQ
+		case l.ch == '>' && l.peekChar() == '=':
+			tokType = token.GEQ
+		case l.ch == '+' && l.peekChar() == '=':
+			tokType = token.PLUSEQ
+		case l.ch == '-' && l.peekChar() == '=':
+			tokType = token.MINUSEQ
+		case l.ch == '*' && l.peekChar() == '=':
+			tokType = token.TIMESEQ
+		case l.ch == '/' && l.peekChar() == '=':
+			tokType = token.SLASHEQ
+		default:
+			tokType = token.CharToToken(l.ch)
+			twoCharsToken = false
+		}
+
+		// Construct the token.
+		if twoCharsToken {
+			l.readChar()
+			tokenBytes = append(tokenBytes, l.ch)
+		}
+		tok = token.NewToken(tokType, tokenBytes)
 	default:
 		if isLetter(l.ch) {
 			tok.Literal = l.readIdentifier()
