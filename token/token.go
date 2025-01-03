@@ -20,6 +20,12 @@ const (
 	// Operators
 	ASSIGN = "="
 	PLUS   = "+"
+	MINUS  = "-"
+	SLASH  = "/"
+	TIMES  = "*"
+	LT     = "<"
+	GT     = ">"
+	NEG    = "!"
 
 	// Delimiters
 	COMMA     = ","
@@ -38,6 +44,12 @@ const (
 var ONE_CHAR_TOKEN_LITTERALS map[byte]bool = map[byte]bool{
 	'=': true,
 	'+': true,
+	'-': true,
+	'/': true,
+	'*': true,
+	'<': true,
+	'>': true,
+	'!': true,
 	';': true,
 	',': true,
 	'(': true,
@@ -65,6 +77,18 @@ func CharToToken(ch byte) TokenType {
 		tt = ASSIGN
 	case '+':
 		tt = PLUS
+	case '-':
+		tt = MINUS
+	case '*':
+		tt = TIMES
+	case '<':
+		tt = LT
+	case '>':
+		tt = GT
+	case '!':
+		tt = NEG
+	case '/':
+		tt = SLASH
 	case ',':
 		tt = COMMA
 	case ';':
