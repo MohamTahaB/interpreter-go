@@ -39,6 +39,13 @@ const (
 	// Keywords
 	FUNCTION = "FUNCTION"
 	LET      = "LET"
+	IF       = "IF"
+	ELSE     = "ELSE"
+	RETURN   = "RETURN"
+
+	// Booleans
+	TRUE  = "TRUE"
+	FALSE = "FALSE"
 )
 
 var ONE_CHAR_TOKEN_LITTERALS map[byte]bool = map[byte]bool{
@@ -116,8 +123,13 @@ func LegalOneCharLiteral(ch byte) bool {
 }
 
 var keywords = map[string]TokenType{
-	"fn":  FUNCTION,
-	"let": LET,
+	"fn":     FUNCTION,
+	"let":    LET,
+	"if":     IF,
+	"else":   ELSE,
+	"return": RETURN,
+	"true":   TRUE,
+	"false":  FALSE,
 }
 
 func LookupIdent(ident string) TokenType {
