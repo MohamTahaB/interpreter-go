@@ -2,6 +2,7 @@ package ast
 
 import (
 	"bytes"
+	"strings"
 
 	"github.com/MohamTahaB/interpreter-go/token"
 )
@@ -40,6 +41,12 @@ type Identifier struct {
 type IntegerLiteral struct {
 	Token token.Token
 	Value int64
+}
+
+type PrefixExpression struct {
+	Token    token.Token
+	Operator string
+	Right    Expression
 }
 
 func (p *Program) TokenLiteral() string {
@@ -96,6 +103,23 @@ func (ie *IntegerLiteral) String() string {
 }
 
 func (ie *IntegerLiteral) expressionNode() {}
+
+func (pe *PrefixExpression) expressionNode() {}
+
+func (pe *PrefixExpression) TokenLiteral() string {
+	return pe.Token.Literal
+}
+
+func (pe *PrefixExpression) String() string {
+	var out strings.Builder
+
+	out.WriteRune('(')
+	out.WriteString(pe.Operator)
+	out.WriteString(pe.Right.String())
+	out.WriteRune(')')
+
+	return out.String()
+}
 
 type ReturnStatement struct {
 	Token       token.Token
