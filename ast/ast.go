@@ -49,6 +49,13 @@ type PrefixExpression struct {
 	Right    Expression
 }
 
+type InfixExpression struct {
+	Token    token.Token
+	Right    Expression
+	Operator string
+	Left     Expression
+}
+
 func (p *Program) TokenLiteral() string {
 	if len(p.Statements) > 0 {
 		return p.Statements[0].TokenLiteral()
@@ -94,15 +101,15 @@ func (i *Identifier) String() string {
 	return i.Value
 }
 
-func (ie *IntegerLiteral) TokenLiteral() string {
-	return ie.Token.Literal
+func (il *IntegerLiteral) TokenLiteral() string {
+	return il.Token.Literal
 }
 
-func (ie *IntegerLiteral) String() string {
-	return ie.TokenLiteral()
+func (il *IntegerLiteral) String() string {
+	return il.TokenLiteral()
 }
 
-func (ie *IntegerLiteral) expressionNode() {}
+func (il *IntegerLiteral) expressionNode() {}
 
 func (pe *PrefixExpression) expressionNode() {}
 
@@ -116,6 +123,24 @@ func (pe *PrefixExpression) String() string {
 	out.WriteRune('(')
 	out.WriteString(pe.Operator)
 	out.WriteString(pe.Right.String())
+	out.WriteRune(')')
+
+	return out.String()
+}
+
+func (ie *InfixExpression) expressionNode() {}
+
+func (ie *InfixExpression) TokenLiteral() string {
+	return ie.Token.Literal
+}
+
+func (ie *InfixExpression) String() string {
+	var out strings.Builder
+
+	out.WriteRune('(')
+	out.WriteString(ie.Left.String())
+	out.WriteString(" " + ie.Operator + " ")
+	out.WriteString(ie.Right.String())
 	out.WriteRune(')')
 
 	return out.String()
