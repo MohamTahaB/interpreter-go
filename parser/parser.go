@@ -39,14 +39,15 @@ const (
 
 // TODO: similarly: add the other infix ops later ...
 var precedences = map[token.TokenType]int{
-	token.EQ:    EQUALS,
-	token.NEQ:   EQUALS,
-	token.LT:    LESSGREATER,
-	token.GT:    LESSGREATER,
-	token.PLUS:  SUM,
-	token.MINUS: SUM,
-	token.TIMES: PRODUCT,
-	token.SLASH: PRODUCT,
+	token.EQ:           EQUALS,
+	token.NEQ:          EQUALS,
+	token.LT:           LESSGREATER,
+	token.GT:           LESSGREATER,
+	token.PLUS:         SUM,
+	token.MINUS:        SUM,
+	token.TIMES:        PRODUCT,
+	token.SLASH:        PRODUCT,
+	token.LPARENTHESIS: CALL,
 }
 
 func New(l *lexer.Lexer) *Parser {
@@ -76,6 +77,8 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerPrefix(token.FUNCTION, p.parseFunctionLiteral)
 
 	p.infixParseFns = make(map[token.TokenType]infixParseFn)
+
+	p.registerInfix(token.LPARENTHESIS, p.parseCallExpression)
 
 	infixOperators := []token.TokenType{
 		token.PLUS,
@@ -335,6 +338,17 @@ func (p *Parser) parseFunctionLiteral() ast.Expression {
 	return fn
 }
 
+func (p *Parser) parseCallExpression(function ast.Expression) ast.Expression {
+	exp := &ast.CallExpression{
+		Token:    p.currToken,
+		Function: function,
+	}
+
+	exp.Arguments = p.parseCallArguments()
+
+	return exp
+}
+
 func (p *Parser) parseBlockStatement() *ast.BlockStatement {
 	block := &ast.BlockStatement{Token: p.currToken,
 		Statements: []ast.Statement{}}
@@ -351,6 +365,30 @@ func (p *Parser) parseBlockStatement() *ast.BlockStatement {
 
 	return block
 
+}
+
+func (p *Parser) parseCallArguments() []ast.Expression {
+	args := []ast.Expression{}
+
+	if p.peekTokenIs(token.RPARENTHESIS) {
+		p.nextToken()
+		return args
+	}
+
+	p.nextToken()
+	args = append(args, p.parseExpression(LOWEST))
+
+	for p.peekTokenIs(token.COMMA) {
+		p.nextToken()
+		p.nextToken()
+		args = append(args, p.parseExpression(LOWEST))
+	}
+
+	if !p.expectPeek(token.RPARENTHESIS) {
+		return nil
+	}
+
+	return args
 }
 
 func (p *Parser) parseFunctionParameters() []*ast.Identifier {
