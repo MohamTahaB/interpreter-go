@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/MohamTahaB/interpreter-go/lexer"
-	"github.com/MohamTahaB/interpreter-go/token"
+	"github.com/MohamTahaB/interpreter-go/parser"
 )
 
 const PROMPT = ">> "
@@ -23,12 +23,29 @@ func Start(in io.Reader, out io.Writer) {
 		}
 
 		line := scanner.Text()
+
+		// Exit REPL
 		if strings.TrimSpace(line) == "exit" {
 			return
 		}
+
 		l := lexer.New(line)
-		for tok := l.NextToken(); tok.Type != token.EOF; tok = l.NextToken() {
-			fmt.Printf("%v\n", tok)
+		p := parser.New(l)
+
+		program := p.ParseProgram()
+
+		if len(p.Errors()) != 0 {
+			printParseErrors(out, p.Errors())
+			continue
 		}
+
+		io.WriteString(out, program.String())
+		io.WriteString(out, "\n")
+	}
+}
+
+func printParseErrors(out io.Writer, errors []string) {
+	for _, errorMsg := range errors {
+		io.WriteString(out, fmt.Sprintf("\t%s\n", errorMsg))
 	}
 }
