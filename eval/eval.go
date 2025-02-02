@@ -54,15 +54,21 @@ func evalPrefixExpression(op string, right object.Object) object.Object {
 	switch op {
 
 	case token.NEG:
-		return evalNegOpExpression(right)
+		return evalNegationPrefixExpression(right)
+	case token.MINUS:
+		return evalNegativePrefixExpression(right)
 
 	default:
-		return nil
+		return NULL
 	}
 }
 
-func evalNegOpExpression(right object.Object) object.Object {
+func evalNegationPrefixExpression(right object.Object) object.Object {
 	var nativeRightEval bool
+
+	if right == NULL {
+		return NULL
+	}
 
 	// Native prefix eval to be determined
 	switch prefixEval := right.(type) {
@@ -72,6 +78,15 @@ func evalNegOpExpression(right object.Object) object.Object {
 		nativeRightEval = prefixEval.Value != 0
 	}
 	return nativeBoolToBooleanObject(!nativeRightEval)
+}
+
+func evalNegativePrefixExpression(right object.Object) object.Object {
+	if right.Type() != object.INTEGER_OBJ {
+		return NULL
+	}
+
+	val := right.(*object.Integer).Value
+	return &object.Integer{Value: -val}
 }
 
 func nativeBoolToBooleanObject(input bool) *object.Boolean {

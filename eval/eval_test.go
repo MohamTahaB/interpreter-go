@@ -8,13 +8,15 @@ import (
 	"github.com/MohamTahaB/interpreter-go/parser"
 )
 
-func TestIntegerExpression(t *testing.T) {
+func TestEvalIntegerExpression(t *testing.T) {
 	tests := []struct {
 		input    string
 		expected int64
 	}{
 		{"5", 5},
 		{"69", 69},
+		{"-5", -5},
+		{"-69", -69},
 	}
 
 	for _, tt := range tests {
@@ -23,7 +25,7 @@ func TestIntegerExpression(t *testing.T) {
 	}
 }
 
-func TestBooleanExpression(t *testing.T) {
+func TestEvalBooleanExpression(t *testing.T) {
 	tests := []struct {
 		input    string
 		expected bool
