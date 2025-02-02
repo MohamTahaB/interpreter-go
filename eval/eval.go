@@ -5,6 +5,11 @@ import (
 	"github.com/MohamTahaB/interpreter-go/object"
 )
 
+var (
+	TRUE  = &object.Boolean{true}
+	FALSE = &object.Boolean{false}
+)
+
 func Eval(node ast.Node) object.Object {
 	switch node := node.(type) {
 	// Statements
@@ -19,6 +24,9 @@ func Eval(node ast.Node) object.Object {
 		return &object.Integer{
 			Value: node.Value,
 		}
+
+	case *ast.Boolean:
+		return nativeBoolToBooleanObject(node.Value)
 	}
 
 	return nil
@@ -32,4 +40,12 @@ func evalStatements(statements []ast.Statement) object.Object {
 	}
 
 	return result
+}
+
+func nativeBoolToBooleanObject(input bool) *object.Boolean {
+	if input {
+		return TRUE
+	}
+
+	return FALSE
 }
