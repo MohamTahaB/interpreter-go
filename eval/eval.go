@@ -10,6 +10,20 @@ var (
 	NULL  = &object.Null{}
 	TRUE  = &object.Boolean{Value: true}
 	FALSE = &object.Boolean{Value: false}
+
+	INFIX_OPERATORS_FUNCS = map[string]func(object.Object, object.Object) object.Object{
+		token.PLUS:  infixPlus,
+		token.MINUS: infixMinus,
+		token.TIMES: infixTimes,
+		token.SLASH: infixSlash,
+
+		token.EQ:  infixEQ,
+		token.NEQ: infixNEQ,
+		token.LT:  infixLT,
+		token.LEQ: infixLEQ,
+		token.GT:  infixGT,
+		token.GEQ: infixGEQ,
+	}
 )
 
 func Eval(node ast.Node) object.Object {
@@ -35,9 +49,12 @@ func Eval(node ast.Node) object.Object {
 		right := Eval(node.Right)
 		return evalPrefixExpression(node.Operator, right)
 
+	case *ast.InfixExpression:
+		return evalInfixExpression(node)
+
 	}
 
-	return nil
+	return NULL
 }
 
 func evalStatements(statements []ast.Statement) object.Object {
@@ -61,6 +78,17 @@ func evalPrefixExpression(op string, right object.Object) object.Object {
 	default:
 		return NULL
 	}
+}
+
+func evalInfixExpression(infixExp *ast.InfixExpression) object.Object {
+	r, l := Eval(infixExp.Right), Eval(infixExp.Left)
+
+	infixOp, ok := INFIX_OPERATORS_FUNCS[infixExp.Operator]
+	if !ok {
+		return NULL
+	}
+
+	return infixOp(l, r)
 }
 
 func evalNegationPrefixExpression(right object.Object) object.Object {
@@ -99,4 +127,216 @@ func nativeBoolToBooleanObject(input bool) *object.Boolean {
 
 func booleanObjectToNativeBool(input *object.Boolean) bool {
 	return input == TRUE
+}
+
+func infixPlus(l, r object.Object) object.Object {
+
+	if l == NULL || r == NULL {
+		return NULL
+	}
+
+	if l.Type() == object.BOOLEAN_OBJ || r.Type() == object.BOOLEAN_OBJ {
+		return NULL
+	}
+
+	// At this point it is safe to cast
+	left, right := l.(*object.Integer), r.(*object.Integer)
+
+	return &object.Integer{
+		Value: left.Value + right.Value,
+	}
+}
+
+func infixMinus(l, r object.Object) object.Object {
+
+	if l == NULL || r == NULL {
+		return NULL
+	}
+
+	if l.Type() == object.BOOLEAN_OBJ || r.Type() == object.BOOLEAN_OBJ {
+		return NULL
+	}
+
+	// At this point it is safe to cast
+	left, right := l.(*object.Integer), r.(*object.Integer)
+
+	return &object.Integer{
+		Value: left.Value - right.Value,
+	}
+}
+
+func infixTimes(l, r object.Object) object.Object {
+
+	if l == NULL || r == NULL {
+		return NULL
+	}
+
+	if l.Type() == object.BOOLEAN_OBJ || r.Type() == object.BOOLEAN_OBJ {
+		return NULL
+	}
+
+	// At this point it is safe to cast
+	left, right := l.(*object.Integer), r.(*object.Integer)
+
+	return &object.Integer{
+		Value: left.Value * right.Value,
+	}
+}
+
+func infixSlash(l, r object.Object) object.Object {
+
+	if l == NULL || r == NULL {
+		return NULL
+	}
+
+	if l.Type() == object.BOOLEAN_OBJ || r.Type() == object.BOOLEAN_OBJ {
+		return NULL
+	}
+
+	// At this point it is safe to cast
+	left, right := l.(*object.Integer), r.(*object.Integer)
+
+	return &object.Integer{
+		Value: left.Value / right.Value,
+	}
+}
+
+func infixEQ(l, r object.Object) object.Object {
+
+	if l == NULL || r == NULL {
+		return NULL
+	}
+
+	if l.Type() != r.Type() {
+		return NULL
+	}
+
+	switch r.Type() {
+	case object.BOOLEAN_OBJ:
+		rBoolean, lBoolean := r.(*object.Boolean).Value, l.(*object.Boolean).Value
+		return &object.Boolean{
+			Value: lBoolean == rBoolean,
+		}
+
+	case object.INTEGER_OBJ:
+		rInteger, lInteger := r.(*object.Integer).Value, l.(*object.Integer).Value
+		return &object.Boolean{
+			Value: lInteger == rInteger,
+		}
+
+	default:
+		return NULL
+	}
+}
+
+func infixNEQ(l, r object.Object) object.Object {
+
+	if l == NULL || r == NULL {
+		return NULL
+	}
+
+	if l.Type() != r.Type() {
+		return NULL
+	}
+
+	switch r.Type() {
+	case object.BOOLEAN_OBJ:
+		rBoolean, lBoolean := r.(*object.Boolean).Value, l.(*object.Boolean).Value
+		return &object.Boolean{
+			Value: lBoolean != rBoolean,
+		}
+
+	case object.INTEGER_OBJ:
+		rInteger, lInteger := r.(*object.Integer).Value, l.(*object.Integer).Value
+		return &object.Boolean{
+			Value: lInteger != rInteger,
+		}
+
+	default:
+		return NULL
+	}
+}
+
+func infixLEQ(l, r object.Object) object.Object {
+
+	if l == NULL || r == NULL {
+		return NULL
+	}
+
+	if l.Type() != r.Type() {
+		return NULL
+	}
+
+	if l.Type() == object.BOOLEAN_OBJ {
+		return NULL
+	}
+
+	rInteger, lInteger := r.(*object.Integer).Value, l.(*object.Integer).Value
+	return &object.Boolean{
+		Value: lInteger <= rInteger,
+	}
+
+}
+
+func infixLT(l, r object.Object) object.Object {
+
+	if l == NULL || r == NULL {
+		return NULL
+	}
+
+	if l.Type() != r.Type() {
+		return NULL
+	}
+
+	if l.Type() == object.BOOLEAN_OBJ {
+		return NULL
+	}
+
+	rInteger, lInteger := r.(*object.Integer).Value, l.(*object.Integer).Value
+	return &object.Boolean{
+		Value: lInteger < rInteger,
+	}
+
+}
+
+func infixGEQ(l, r object.Object) object.Object {
+
+	if l == NULL || r == NULL {
+		return NULL
+	}
+
+	if l.Type() != r.Type() {
+		return NULL
+	}
+
+	if l.Type() == object.BOOLEAN_OBJ {
+		return NULL
+	}
+
+	rInteger, lInteger := r.(*object.Integer).Value, l.(*object.Integer).Value
+	return &object.Boolean{
+		Value: lInteger >= rInteger,
+	}
+
+}
+
+func infixGT(l, r object.Object) object.Object {
+
+	if l == NULL || r == NULL {
+		return NULL
+	}
+
+	if l.Type() != r.Type() {
+		return NULL
+	}
+
+	if l.Type() == object.BOOLEAN_OBJ {
+		return NULL
+	}
+
+	rInteger, lInteger := r.(*object.Integer).Value, l.(*object.Integer).Value
+	return &object.Boolean{
+		Value: lInteger > rInteger,
+	}
+
 }
