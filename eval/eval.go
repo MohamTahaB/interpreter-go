@@ -52,6 +52,12 @@ func Eval(node ast.Node) object.Object {
 	case *ast.InfixExpression:
 		return evalInfixExpression(node)
 
+	case *ast.BlockStatement:
+		return evalStatements(node.Statements)
+
+	case *ast.IfExpression:
+		return evalConditionalExpression(node)
+
 	}
 
 	return NULL
@@ -89,6 +95,20 @@ func evalInfixExpression(infixExp *ast.InfixExpression) object.Object {
 	}
 
 	return infixOp(l, r)
+}
+
+func evalConditionalExpression(conditionalExp *ast.IfExpression) object.Object {
+	conditionEval := Eval(conditionalExp.Condition)
+
+	// Truthy == not null
+	if conditionEval.Truthy() {
+		return Eval(conditionalExp.Consequence)
+	}
+	if conditionalExp.Alternative != nil {
+		return Eval(conditionalExp.Alternative)
+	}
+
+	return NULL
 }
 
 func evalNegationPrefixExpression(right object.Object) object.Object {
