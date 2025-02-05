@@ -8,6 +8,8 @@ const (
 	INTEGER_OBJ = "INTEGER"
 	BOOLEAN_OBJ = "BOOLEAN"
 	NULL_OBJ    = "NULL"
+
+	RETURN_OBJ = "RETURN_VAL"
 )
 
 type Object interface {
@@ -28,6 +30,11 @@ type Boolean struct {
 
 // Null type
 type Null struct{}
+
+// Return wrapper
+type ReturnValue struct {
+	Value Object
+}
 
 func (i *Integer) Inspect() string {
 	return fmt.Sprintf("%d", i.Value)
@@ -63,4 +70,16 @@ func (n *Null) Type() ObjectType {
 
 func (n *Null) Truthy() bool {
 	return false
+}
+
+func (rv *ReturnValue) Inspect() string {
+	return rv.Value.Inspect()
+}
+
+func (rv *ReturnValue) Type() ObjectType {
+	return RETURN_OBJ
+}
+
+func (rv *ReturnValue) Truthy() bool {
+	return rv.Value.Truthy()
 }

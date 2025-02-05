@@ -93,6 +93,40 @@ func TestIfElseExpressions(t *testing.T) {
 	}
 }
 
+func TestReturnExpressions(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected interface{}
+	}{
+		{"return 10;", 10},
+		{"return 10; 11", 10},
+		{"return 2*5; true", 10},
+		{"9; return 10;", 10},
+
+		{"return true;", true},
+		{"10; return false;", false},
+		{`
+		if (10 > 1) {
+			if (10 > 1) {
+				return 10;
+			}
+			return 1;
+		}
+		`,
+			10}}
+
+	for _, tt := range tests {
+		evaluated := testEval(tt.input)
+
+		switch expected := tt.expected.(type) {
+		case bool:
+			testBooleanObject(t, evaluated, expected)
+		case int:
+			testIntegerObject(t, evaluated, int64(expected))
+		}
+	}
+}
+
 func testIntegerObject(t *testing.T, obj object.Object, expected int64) bool {
 	result, ok := obj.(*object.Integer)
 	if !ok {
