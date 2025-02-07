@@ -1,9 +1,18 @@
 package eval
 
 import (
+	"fmt"
+
 	"github.com/MohamTahaB/interpreter-go/ast"
 	"github.com/MohamTahaB/interpreter-go/object"
 	"github.com/MohamTahaB/interpreter-go/token"
+)
+
+const (
+	UNKNOWN_OP_PREFIX_MSG   = "unknown operator: %s%s"
+	UNKNOWN_OP_INFIX_MSG    = "unknown operator: %s %s %s"
+	TYPE_MISMATCH_INFIX_MSG = "type mismatch: %s %s %s"
+	DIVISION_BY_ZERO        = "division by 0"
 )
 
 var (
@@ -47,9 +56,22 @@ func Eval(node ast.Node) object.Object {
 	case *ast.PrefixExpression:
 
 		right := Eval(node.Right)
+		if isError(right) {
+			return right
+		}
 		return evalPrefixExpression(node.Operator, right)
 
 	case *ast.InfixExpression:
+
+		left := Eval(node.Left)
+		if isError(left) {
+			return left
+		}
+
+		right := Eval(node.Left)
+		if isError(right) {
+			return right
+		}
 		return evalInfixExpression(node)
 
 	case *ast.BlockStatement:
@@ -77,6 +99,9 @@ func evalProgram(statements []ast.Statement) object.Object {
 		if returnVal, ok := result.(*object.ReturnValue); ok {
 			return returnVal.Value
 		}
+		if errorObj, ok := result.(*object.Error); ok {
+			return errorObj
+		}
 	}
 
 	return result
@@ -90,6 +115,9 @@ func evalBlockStatement(statements []ast.Statement) object.Object {
 
 		if returnVal, ok := result.(*object.ReturnValue); ok && result != nil {
 			return returnVal
+		}
+		if errorObj, ok := result.(*object.Error); ok && result != nil {
+			return errorObj
 		}
 	}
 
@@ -105,7 +133,7 @@ func evalPrefixExpression(op string, right object.Object) object.Object {
 		return evalNegativePrefixExpression(right)
 
 	default:
-		return NULL
+		return newError(UNKNOWN_OP_PREFIX_MSG, op, right.Type())
 	}
 }
 
@@ -114,7 +142,8 @@ func evalInfixExpression(infixExp *ast.InfixExpression) object.Object {
 
 	infixOp, ok := INFIX_OPERATORS_FUNCS[infixExp.Operator]
 	if !ok {
-		return NULL
+		// What is not recognized is the operator
+		return newError(UNKNOWN_OP_INFIX_MSG, "", infixExp.Operator, "")
 	}
 
 	return infixOp(l, r)
@@ -122,6 +151,10 @@ func evalInfixExpression(infixExp *ast.InfixExpression) object.Object {
 
 func evalConditionalExpression(conditionalExp *ast.IfExpression) object.Object {
 	conditionEval := Eval(conditionalExp.Condition)
+
+	if isError(conditionEval) {
+		return conditionEval
+	}
 
 	// Truthy == not null
 	if conditionEval.Truthy() {
@@ -138,7 +171,7 @@ func evalNegationPrefixExpression(right object.Object) object.Object {
 	var nativeRightEval bool
 
 	if right == NULL {
-		return NULL
+		return newError(UNKNOWN_OP_PREFIX_MSG, token.NEG, right.Type())
 	}
 
 	// Native prefix eval to be determined
@@ -153,7 +186,7 @@ func evalNegationPrefixExpression(right object.Object) object.Object {
 
 func evalNegativePrefixExpression(right object.Object) object.Object {
 	if right.Type() != object.INTEGER_OBJ {
-		return NULL
+		return newError(UNKNOWN_OP_PREFIX_MSG, token.MINUS, right.Type())
 	}
 
 	val := right.(*object.Integer).Value
@@ -174,12 +207,14 @@ func booleanObjectToNativeBool(input *object.Boolean) bool {
 
 func infixPlus(l, r object.Object) object.Object {
 
-	if l == NULL || r == NULL {
-		return NULL
-	}
+	if l.Type() != object.INTEGER_OBJ || r.Type() != object.INTEGER_OBJ {
 
-	if l.Type() == object.BOOLEAN_OBJ || r.Type() == object.BOOLEAN_OBJ {
-		return NULL
+		// Whether a mismatch or unknow op
+		if l.Type() == r.Type() {
+			return newError(UNKNOWN_OP_INFIX_MSG, l.Type(), token.PLUS, r.Type())
+		}
+
+		return newError(TYPE_MISMATCH_INFIX_MSG, l.Type(), token.PLUS, r.Type())
 	}
 
 	// At this point it is safe to cast
@@ -192,12 +227,14 @@ func infixPlus(l, r object.Object) object.Object {
 
 func infixMinus(l, r object.Object) object.Object {
 
-	if l == NULL || r == NULL {
-		return NULL
-	}
+	if l.Type() != object.INTEGER_OBJ || r.Type() != object.INTEGER_OBJ {
 
-	if l.Type() == object.BOOLEAN_OBJ || r.Type() == object.BOOLEAN_OBJ {
-		return NULL
+		// Whether a mismatch or unknow op
+		if l.Type() == r.Type() {
+			return newError(UNKNOWN_OP_INFIX_MSG, l.Type(), token.MINUS, r.Type())
+		}
+
+		return newError(TYPE_MISMATCH_INFIX_MSG, l.Type(), token.MINUS, r.Type())
 	}
 
 	// At this point it is safe to cast
@@ -210,12 +247,14 @@ func infixMinus(l, r object.Object) object.Object {
 
 func infixTimes(l, r object.Object) object.Object {
 
-	if l == NULL || r == NULL {
-		return NULL
-	}
+	if l.Type() != object.INTEGER_OBJ || r.Type() != object.INTEGER_OBJ {
 
-	if l.Type() == object.BOOLEAN_OBJ || r.Type() == object.BOOLEAN_OBJ {
-		return NULL
+		// Whether a mismatch or unknow op
+		if l.Type() == r.Type() {
+			return newError(UNKNOWN_OP_INFIX_MSG, l.Type(), token.TIMES, r.Type())
+		}
+
+		return newError(TYPE_MISMATCH_INFIX_MSG, l.Type(), token.TIMES, r.Type())
 	}
 
 	// At this point it is safe to cast
@@ -228,16 +267,22 @@ func infixTimes(l, r object.Object) object.Object {
 
 func infixSlash(l, r object.Object) object.Object {
 
-	if l == NULL || r == NULL {
-		return NULL
-	}
+	if l.Type() != object.INTEGER_OBJ || r.Type() != object.INTEGER_OBJ {
 
-	if l.Type() == object.BOOLEAN_OBJ || r.Type() == object.BOOLEAN_OBJ {
-		return NULL
+		// Whether a mismatch or unknow op
+		if l.Type() == r.Type() {
+			return newError(UNKNOWN_OP_INFIX_MSG, l.Type(), token.SLASH, r.Type())
+		}
+
+		return newError(TYPE_MISMATCH_INFIX_MSG, l.Type(), token.SLASH, r.Type())
 	}
 
 	// At this point it is safe to cast
 	left, right := l.(*object.Integer), r.(*object.Integer)
+
+	if right.Value == 0 {
+		return newError(DIVISION_BY_ZERO)
+	}
 
 	return &object.Integer{
 		Value: left.Value / right.Value,
@@ -247,11 +292,13 @@ func infixSlash(l, r object.Object) object.Object {
 func infixEQ(l, r object.Object) object.Object {
 
 	if l == NULL || r == NULL {
-		return NULL
+		return &object.Boolean{
+			Value: l == r,
+		}
 	}
 
 	if l.Type() != r.Type() {
-		return NULL
+		return newError(UNKNOWN_OP_INFIX_MSG, l.Type(), token.EQ, r.Type())
 	}
 
 	switch r.Type() {
@@ -268,18 +315,20 @@ func infixEQ(l, r object.Object) object.Object {
 		}
 
 	default:
-		return NULL
+		return newError(UNKNOWN_OP_INFIX_MSG, l.Type(), token.EQ, r.Type())
 	}
 }
 
 func infixNEQ(l, r object.Object) object.Object {
 
 	if l == NULL || r == NULL {
-		return NULL
+		return &object.Boolean{
+			Value: l != r,
+		}
 	}
 
 	if l.Type() != r.Type() {
-		return NULL
+		return newError(UNKNOWN_OP_INFIX_MSG, l.Type(), token.NEQ, r.Type())
 	}
 
 	switch r.Type() {
@@ -296,22 +345,14 @@ func infixNEQ(l, r object.Object) object.Object {
 		}
 
 	default:
-		return NULL
+		return newError(UNKNOWN_OP_INFIX_MSG, l.Type(), token.NEQ, r.Type())
 	}
 }
 
 func infixLEQ(l, r object.Object) object.Object {
 
-	if l == NULL || r == NULL {
-		return NULL
-	}
-
-	if l.Type() != r.Type() {
-		return NULL
-	}
-
-	if l.Type() == object.BOOLEAN_OBJ {
-		return NULL
+	if l.Type() != object.INTEGER_OBJ || r.Type() != object.INTEGER_OBJ {
+		return newError(UNKNOWN_OP_INFIX_MSG, l.Type(), token.LEQ, r.Type())
 	}
 
 	rInteger, lInteger := r.(*object.Integer).Value, l.(*object.Integer).Value
@@ -323,16 +364,8 @@ func infixLEQ(l, r object.Object) object.Object {
 
 func infixLT(l, r object.Object) object.Object {
 
-	if l == NULL || r == NULL {
-		return NULL
-	}
-
-	if l.Type() != r.Type() {
-		return NULL
-	}
-
-	if l.Type() == object.BOOLEAN_OBJ {
-		return NULL
+	if l.Type() != object.INTEGER_OBJ || r.Type() != object.INTEGER_OBJ {
+		return newError(UNKNOWN_OP_INFIX_MSG, l.Type(), token.LT, r.Type())
 	}
 
 	rInteger, lInteger := r.(*object.Integer).Value, l.(*object.Integer).Value
@@ -344,16 +377,8 @@ func infixLT(l, r object.Object) object.Object {
 
 func infixGEQ(l, r object.Object) object.Object {
 
-	if l == NULL || r == NULL {
-		return NULL
-	}
-
-	if l.Type() != r.Type() {
-		return NULL
-	}
-
-	if l.Type() == object.BOOLEAN_OBJ {
-		return NULL
+	if l.Type() != object.INTEGER_OBJ || r.Type() != object.INTEGER_OBJ {
+		return newError(UNKNOWN_OP_INFIX_MSG, l.Type(), token.GEQ, r.Type())
 	}
 
 	rInteger, lInteger := r.(*object.Integer).Value, l.(*object.Integer).Value
@@ -365,16 +390,8 @@ func infixGEQ(l, r object.Object) object.Object {
 
 func infixGT(l, r object.Object) object.Object {
 
-	if l == NULL || r == NULL {
-		return NULL
-	}
-
-	if l.Type() != r.Type() {
-		return NULL
-	}
-
-	if l.Type() == object.BOOLEAN_OBJ {
-		return NULL
+	if l.Type() != object.INTEGER_OBJ || r.Type() != object.INTEGER_OBJ {
+		return newError(UNKNOWN_OP_INFIX_MSG, l.Type(), token.GT, r.Type())
 	}
 
 	rInteger, lInteger := r.(*object.Integer).Value, l.(*object.Integer).Value
@@ -382,4 +399,17 @@ func infixGT(l, r object.Object) object.Object {
 		Value: lInteger > rInteger,
 	}
 
+}
+
+func newError(format string, a ...interface{}) *object.Error {
+	return &object.Error{Message: fmt.Sprintf(format, a...)}
+}
+
+func isError(obj object.Object) bool {
+	if obj == nil {
+		return false
+	}
+
+	_, ok := obj.(*object.Error)
+	return ok
 }

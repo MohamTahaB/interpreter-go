@@ -10,6 +10,7 @@ const (
 	NULL_OBJ    = "NULL"
 
 	RETURN_OBJ = "RETURN_VAL"
+	ERROR_OBJ  = "ERROR"
 )
 
 type Object interface {
@@ -34,6 +35,11 @@ type Null struct{}
 // Return wrapper
 type ReturnValue struct {
 	Value Object
+}
+
+// Internal Error Wrapper
+type Error struct {
+	Message string
 }
 
 func (i *Integer) Inspect() string {
@@ -82,4 +88,16 @@ func (rv *ReturnValue) Type() ObjectType {
 
 func (rv *ReturnValue) Truthy() bool {
 	return rv.Value.Truthy()
+}
+
+func (e *Error) Inspect() string {
+	return e.Message
+}
+
+func (e *Error) Type() ObjectType {
+	return ERROR_OBJ
+}
+
+func (e *Error) Truthy() bool {
+	return false
 }
