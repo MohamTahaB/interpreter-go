@@ -13,6 +13,7 @@ const (
 	UNKNOWN_OP_INFIX_MSG    = "unknown operator: %s %s %s"
 	TYPE_MISMATCH_INFIX_MSG = "type mismatch: %s %s %s"
 	DIVISION_BY_ZERO        = "division by 0"
+	IDENT_NOT_FOUND         = "identifier not found: %s"
 )
 
 var (
@@ -35,14 +36,14 @@ var (
 	}
 )
 
-func Eval(node ast.Node) object.Object {
+func Eval(node ast.Node, env *object.Environment) object.Object {
 	switch node := node.(type) {
 	// Statements
 	case *ast.Program:
-		return evalProgram(node.Statements)
+		return evalProgram(node.Statements, env)
 
 	case *ast.ExpressionStatement:
-		return Eval(node.Expression)
+		return Eval(node.Expression, env)
 
 	// Expressions
 	case *ast.IntegerLiteral:
@@ -55,7 +56,7 @@ func Eval(node ast.Node) object.Object {
 
 	case *ast.PrefixExpression:
 
-		right := Eval(node.Right)
+		right := Eval(node.Right, env)
 		if isError(right) {
 			return right
 		}
@@ -63,38 +64,47 @@ func Eval(node ast.Node) object.Object {
 
 	case *ast.InfixExpression:
 
-		left := Eval(node.Left)
+		left := Eval(node.Left, env)
 		if isError(left) {
 			return left
 		}
 
-		right := Eval(node.Left)
+		right := Eval(node.Right, env)
 		if isError(right) {
 			return right
 		}
-		return evalInfixExpression(node)
+		return evalInfixExpression(left, right, node.Operator)
 
 	case *ast.BlockStatement:
-		return evalBlockStatement(node.Statements)
+		return evalBlockStatement(node.Statements, env)
+
+	case *ast.LetStatement:
+		val := Eval(node.Value, env)
+		if isError(val) {
+			return val
+		}
+		env.Set(node.Name.Value, val)
 
 	case *ast.IfExpression:
-		return evalConditionalExpression(node)
+		return evalConditionalExpression(node, env)
 
 	case *ast.ReturnStatement:
 		return &object.ReturnValue{
-			Value: Eval(node.ReturnValue),
+			Value: Eval(node.ReturnValue, env),
 		}
 
+	case *ast.Identifier:
+		return evalIdentifier(node, env)
 	}
 
 	return NULL
 }
 
-func evalProgram(statements []ast.Statement) object.Object {
+func evalProgram(statements []ast.Statement, env *object.Environment) object.Object {
 	var result object.Object
 
 	for _, statement := range statements {
-		result = Eval(statement)
+		result = Eval(statement, env)
 
 		if returnVal, ok := result.(*object.ReturnValue); ok {
 			return returnVal.Value
@@ -107,11 +117,11 @@ func evalProgram(statements []ast.Statement) object.Object {
 	return result
 }
 
-func evalBlockStatement(statements []ast.Statement) object.Object {
+func evalBlockStatement(statements []ast.Statement, env *object.Environment) object.Object {
 	var result object.Object
 
 	for _, statement := range statements {
-		result = Eval(statement)
+		result = Eval(statement, env)
 
 		if returnVal, ok := result.(*object.ReturnValue); ok && result != nil {
 			return returnVal
@@ -137,20 +147,19 @@ func evalPrefixExpression(op string, right object.Object) object.Object {
 	}
 }
 
-func evalInfixExpression(infixExp *ast.InfixExpression) object.Object {
-	r, l := Eval(infixExp.Right), Eval(infixExp.Left)
+func evalInfixExpression(l, r object.Object, operator string) object.Object {
 
-	infixOp, ok := INFIX_OPERATORS_FUNCS[infixExp.Operator]
+	infixOp, ok := INFIX_OPERATORS_FUNCS[operator]
 	if !ok {
 		// What is not recognized is the operator
-		return newError(UNKNOWN_OP_INFIX_MSG, "", infixExp.Operator, "")
+		return newError(UNKNOWN_OP_INFIX_MSG, "", operator, "")
 	}
 
 	return infixOp(l, r)
 }
 
-func evalConditionalExpression(conditionalExp *ast.IfExpression) object.Object {
-	conditionEval := Eval(conditionalExp.Condition)
+func evalConditionalExpression(conditionalExp *ast.IfExpression, env *object.Environment) object.Object {
+	conditionEval := Eval(conditionalExp.Condition, env)
 
 	if isError(conditionEval) {
 		return conditionEval
@@ -158,13 +167,22 @@ func evalConditionalExpression(conditionalExp *ast.IfExpression) object.Object {
 
 	// Truthy == not null
 	if conditionEval.Truthy() {
-		return Eval(conditionalExp.Consequence)
+		return Eval(conditionalExp.Consequence, env)
 	}
 	if conditionalExp.Alternative != nil {
-		return Eval(conditionalExp.Alternative)
+		return Eval(conditionalExp.Alternative, env)
 	}
 
 	return NULL
+}
+
+func evalIdentifier(ident *ast.Identifier, env *object.Environment) object.Object {
+	obj, ok := env.Get(ident.Value)
+	if ok {
+		return obj
+	}
+
+	return newError(IDENT_NOT_FOUND, ident.Value)
 }
 
 func evalNegationPrefixExpression(right object.Object) object.Object {

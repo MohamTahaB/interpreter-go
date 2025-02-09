@@ -42,6 +42,11 @@ type Error struct {
 	Message string
 }
 
+// Environment
+type Environment struct {
+	store map[string]Object
+}
+
 func (i *Integer) Inspect() string {
 	return fmt.Sprintf("%d", i.Value)
 }
@@ -100,4 +105,20 @@ func (e *Error) Type() ObjectType {
 
 func (e *Error) Truthy() bool {
 	return false
+}
+
+func NewEnvironment() *Environment {
+	return &Environment{
+		store: make(map[string]Object),
+	}
+}
+
+func (e *Environment) Get(name string) (Object, bool) {
+	obj, ok := e.store[name]
+	return obj, ok
+}
+
+func (e *Environment) Set(name string, value Object) Object {
+	e.store[name] = value
+	return value
 }
