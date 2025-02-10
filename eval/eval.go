@@ -14,6 +14,7 @@ const (
 	TYPE_MISMATCH_INFIX_MSG = "type mismatch: %s %s %s"
 	DIVISION_BY_ZERO        = "division by 0"
 	IDENT_NOT_FOUND         = "identifier not found: %s"
+	NOT_A_FUNC              = "not a function: %s"
 )
 
 var (
@@ -95,6 +96,29 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 
 	case *ast.Identifier:
 		return evalIdentifier(node, env)
+
+	case *ast.FunctionLiteral:
+		params := node.Parameters
+		body := node.Body
+		return &object.Function{
+			Parameters: params,
+			Env:        env,
+			Body:       body,
+		}
+
+	case *ast.CallExpression:
+		fn := Eval(node.Function, env)
+		if isError(fn) {
+			return fn
+		}
+
+		args := evalExpressions(node.Arguments, env)
+		if len(args) == 1 && isError(args[0]) {
+			return args[0]
+		}
+
+		return applyFunction(fn, args)
+
 	}
 
 	return NULL
@@ -209,6 +233,54 @@ func evalNegativePrefixExpression(right object.Object) object.Object {
 
 	val := right.(*object.Integer).Value
 	return &object.Integer{Value: -val}
+}
+
+func evalExpressions(args []ast.Expression, env *object.Environment) []object.Object {
+	argsEval := []object.Object{}
+
+	for _, arg := range args {
+		argEval := Eval(arg, env)
+
+		if isError(argEval) {
+			return []object.Object{argEval}
+		}
+
+		argsEval = append(argsEval, argEval)
+	}
+
+	return argsEval
+}
+
+func applyFunction(fn object.Object, args []object.Object) object.Object {
+
+	function, ok := fn.(*object.Function)
+	if !ok {
+		return newError(NOT_A_FUNC, fn.Type())
+	}
+
+	extendedEnv := extendedFunctionEnv(function, args)
+	evaluated := Eval(function.Body, extendedEnv)
+
+	return unwrapReturnValue(evaluated)
+}
+
+func extendedFunctionEnv(fn *object.Function, args []object.Object) *object.Environment {
+	env := object.NewEnclosedEnvironment(fn.Env)
+
+	for idx, param := range fn.Parameters {
+		env.Set(param.Value, args[idx])
+	}
+
+	return env
+}
+
+func unwrapReturnValue(val object.Object) object.Object {
+	returnVal, ok := val.(*object.ReturnValue)
+	if ok {
+		return returnVal.Value
+	}
+
+	return val
 }
 
 func nativeBoolToBooleanObject(input bool) *object.Boolean {
