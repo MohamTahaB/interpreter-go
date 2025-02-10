@@ -6,7 +6,9 @@ import (
 	"io"
 	"strings"
 
+	"github.com/MohamTahaB/interpreter-go/eval"
 	"github.com/MohamTahaB/interpreter-go/lexer"
+	"github.com/MohamTahaB/interpreter-go/object"
 	"github.com/MohamTahaB/interpreter-go/parser"
 )
 
@@ -62,6 +64,7 @@ ITS NOT LOOKING GOOD BRUV !!! Had some issues:
 
 func Start(in io.Reader, out io.Writer) {
 	scanner := bufio.NewScanner(in)
+	env := object.NewEnvironment()
 
 	for {
 		fmt.Print(PROMPT)
@@ -87,8 +90,11 @@ func Start(in io.Reader, out io.Writer) {
 			continue
 		}
 
-		io.WriteString(out, program.String())
-		io.WriteString(out, "\n")
+		evaluated := eval.Eval(program, env)
+		if evaluated != nil {
+			io.WriteString(out, evaluated.Inspect())
+			io.WriteString(out, "\n")
+		}
 	}
 }
 
