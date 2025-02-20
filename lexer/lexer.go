@@ -1,6 +1,8 @@
 package lexer
 
-import "github.com/MohamTahaB/interpreter-go/token"
+import (
+	"github.com/MohamTahaB/interpreter-go/token"
+)
 
 type Lexer struct {
 	input        string // The code being lexed.
@@ -83,10 +85,16 @@ func (l *Lexer) NextToken() token.Token {
 			tok.Literal = l.readIdentifier()
 			tok.Type = token.LookupIdent(tok.Literal)
 			return tok
-		} else if isDigit(l.ch) {
+		}
+		if isDigit(l.ch) {
 			tok.Literal = l.readNumber()
 			tok.Type = token.INT
 			return tok
+		}
+
+		if l.ch == '"' {
+			tok.Type = token.STRING
+			tok.Literal = l.readString()
 		} else {
 			tok = token.NewToken(token.ILLEGAL, []byte{l.ch})
 		}
@@ -108,6 +116,18 @@ func (l *Lexer) readNumber() string {
 	position := l.position
 	for isDigit(l.ch) {
 		l.readChar()
+	}
+
+	return l.input[position:l.position]
+}
+
+func (l *Lexer) readString() string {
+	position := l.position + 1
+	for {
+		l.readChar()
+		if l.ch == '"' || l.ch == 0 {
+			break
+		}
 	}
 
 	return l.input[position:l.position]

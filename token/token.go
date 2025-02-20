@@ -56,6 +56,9 @@ const (
 	// Booleans
 	TRUE  = "TRUE"
 	FALSE = "FALSE"
+
+	// String
+	STRING = "STRING"
 )
 
 var ONE_CHAR_TOKEN_LITTERALS map[byte]bool = map[byte]bool{

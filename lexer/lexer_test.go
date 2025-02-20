@@ -72,6 +72,9 @@ func TestNextToken_OK(t *testing.T) {
 	five -= 5;
 	five *= 5;
 	five /= 5;
+
+  "foobar"
+  "foo bar"
 	`
 
 	l := New(input)
@@ -174,6 +177,8 @@ func TestNextToken_OK(t *testing.T) {
 		{token.SLASHEQ, "/="},
 		{token.INT, "5"},
 		{token.SEMICOLON, ";"},
+		{token.STRING, "foobar"},
+		{token.STRING, "foo bar"},
 		{token.EOF, "\x00"},
 	}
 
