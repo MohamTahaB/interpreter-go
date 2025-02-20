@@ -74,6 +74,11 @@ type FunctionLiteral struct {
 	Body       *BlockStatement
 }
 
+type StringLiteral struct {
+	Token token.Token
+	Value string
+}
+
 type BlockStatement struct {
 	Token      token.Token
 	Statements []Statement
@@ -266,6 +271,16 @@ func (fl *FunctionLiteral) String() string {
 	out.WriteString(fl.Body.String())
 
 	return out.String()
+}
+
+func (sl *StringLiteral) expressionNode() {}
+
+func (sl *StringLiteral) TokenLiteral() string {
+	return sl.Token.Literal
+}
+
+func (sl *StringLiteral) String() string {
+	return sl.Token.Literal
 }
 
 type ReturnStatement struct {

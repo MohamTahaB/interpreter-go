@@ -80,6 +80,7 @@ func New(l *lexer.Lexer) *Parser {
 
 	p.registerInfix(token.LPARENTHESIS, p.parseCallExpression)
 
+	p.registerPrefix(token.STRING, p.parseStringLiteral)
 	infixOperators := []token.TokenType{
 		token.PLUS,
 		token.MINUS,
@@ -431,6 +432,13 @@ func (p *Parser) parseFunctionParameters() []*ast.Identifier {
 
 	return out
 
+}
+
+func (p *Parser) parseStringLiteral() ast.Expression {
+	return &ast.StringLiteral{
+		Token: p.currToken,
+		Value: p.currToken.Literal,
+	}
 }
 
 func (p *Parser) expectPeek(tokType token.TokenType) bool {
