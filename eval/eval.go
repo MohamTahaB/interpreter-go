@@ -323,7 +323,7 @@ func infixMinus(l, r object.Object) object.Object {
 	// Fetch for the right infix function
 	op, ok := object.OBJECT_INFIX_MINUS_FUNCS[l.Type()]
 	if !ok {
-		return newError(UNKNOWN_OP_INFIX_MSG, l.Type(), token.PLUS, r.Type())
+		return newError(UNKNOWN_OP_INFIX_MSG, l.Type(), token.MINUS, r.Type())
 	}
 
 	return op(l, r)
