@@ -17,6 +17,8 @@ const (
 	RETURN_OBJ   = "RETURN_VAL"
 	ERROR_OBJ    = "ERROR"
 	FUNCTION_OBJ = "FUNCTION"
+
+	STRING_OBJ = "STRING"
 )
 
 type Object interface {
@@ -52,6 +54,10 @@ type Error struct {
 type Environment struct {
 	store map[string]Object
 	outer *Environment
+}
+
+type String struct {
+	Value string
 }
 
 // Function Object
@@ -175,4 +181,16 @@ func (f *Function) Inspect() string {
 
 func (f *Function) Truthy() bool {
 	return true
+}
+
+func (s *String) Type() ObjectType {
+	return STRING_OBJ
+}
+
+func (s *String) Inspect() string {
+	return s.Value
+}
+
+func (s *String) Truthy() bool {
+	return len(s.Value) != 0
 }

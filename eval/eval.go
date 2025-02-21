@@ -119,6 +119,8 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 
 		return applyFunction(fn, args)
 
+	case *ast.StringLiteral:
+		return &object.String{Value: node.Value}
 	}
 
 	return NULL
@@ -297,42 +299,34 @@ func booleanObjectToNativeBool(input *object.Boolean) bool {
 
 func infixPlus(l, r object.Object) object.Object {
 
-	if l.Type() != object.INTEGER_OBJ || r.Type() != object.INTEGER_OBJ {
-
-		// Whether a mismatch or unknow op
-		if l.Type() == r.Type() {
-			return newError(UNKNOWN_OP_INFIX_MSG, l.Type(), token.PLUS, r.Type())
-		}
-
+	// Mismatch case
+	if l.Type() != r.Type() {
 		return newError(TYPE_MISMATCH_INFIX_MSG, l.Type(), token.PLUS, r.Type())
 	}
 
-	// At this point it is safe to cast
-	left, right := l.(*object.Integer), r.(*object.Integer)
-
-	return &object.Integer{
-		Value: left.Value + right.Value,
+	// Fetch for the right infix function
+	op, ok := object.OBJECT_INFIX_PLUS_FUNCS[l.Type()]
+	if !ok {
+		return newError(UNKNOWN_OP_INFIX_MSG, l.Type(), token.PLUS, r.Type())
 	}
+
+	return op(l, r)
 }
 
 func infixMinus(l, r object.Object) object.Object {
 
-	if l.Type() != object.INTEGER_OBJ || r.Type() != object.INTEGER_OBJ {
-
-		// Whether a mismatch or unknow op
-		if l.Type() == r.Type() {
-			return newError(UNKNOWN_OP_INFIX_MSG, l.Type(), token.MINUS, r.Type())
-		}
-
-		return newError(TYPE_MISMATCH_INFIX_MSG, l.Type(), token.MINUS, r.Type())
+	// Mismatch case
+	if l.Type() != r.Type() {
+		return newError(UNKNOWN_OP_INFIX_MSG, l.Type(), token.MINUS, r.Type())
 	}
 
-	// At this point it is safe to cast
-	left, right := l.(*object.Integer), r.(*object.Integer)
-
-	return &object.Integer{
-		Value: left.Value - right.Value,
+	// Fetch for the right infix function
+	op, ok := object.OBJECT_INFIX_MINUS_FUNCS[l.Type()]
+	if !ok {
+		return newError(UNKNOWN_OP_INFIX_MSG, l.Type(), token.PLUS, r.Type())
 	}
+
+	return op(l, r)
 }
 
 func infixTimes(l, r object.Object) object.Object {
