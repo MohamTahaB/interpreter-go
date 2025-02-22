@@ -661,6 +661,39 @@ func TestStringLiteralExpression(t *testing.T) {
 	}
 }
 
+func TestParsingArrayLiterals(t *testing.T) {
+	input := "[ 1, 2*2, 3+3 ]"
+
+	l := lexer.New(input)
+	p := New(l)
+
+	program := p.ParseProgram()
+
+	checkParserErrors(t, p)
+
+	if len(program.Statements) != 1 {
+		t.Fatalf("wrong statements found. Expected=%d, got=%d", 1, len(program.Statements))
+	}
+
+	stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("statement is not an ast.ExpressionStatement. Got=%T", program.Statements[0])
+	}
+
+	expr, ok := stmt.Expression.(*ast.ArrayLiteral)
+	if !ok {
+		t.Fatalf("statement is not an ast.ArrayLiteral. Got=%T", stmt.Expression)
+	}
+
+	if len(expr.Elements) != 3 {
+		t.Fatalf("wrong ArrayLiteral Expression. Expected=%d element(s), got=%d", 3, len(expr.Elements))
+	}
+
+	testIntegerLiteral(t, expr.Elements[0], 1)
+	testInfixExpression(t, expr.Elements[1], 2, "*", 2)
+	testInfixExpression(t, expr.Elements[2], 3, "+", 3)
+}
+
 func testLetStatement(t *testing.T, s ast.Statement, name string) bool {
 	if s.TokenLiteral() != "let" {
 		t.Errorf("s.TokenLiteral not 'let'. Got=%q", s.TokenLiteral())

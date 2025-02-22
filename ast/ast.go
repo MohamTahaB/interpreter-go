@@ -79,6 +79,11 @@ type StringLiteral struct {
 	Value string
 }
 
+type ArrayLiteral struct {
+	Token    token.Token
+	Elements []Expression
+}
+
 type BlockStatement struct {
 	Token      token.Token
 	Statements []Statement
@@ -281,6 +286,28 @@ func (sl *StringLiteral) TokenLiteral() string {
 
 func (sl *StringLiteral) String() string {
 	return sl.Token.Literal
+}
+
+func (al *ArrayLiteral) expressionNode() {}
+
+func (al *ArrayLiteral) TokenLiteral() string {
+	return al.Token.Literal
+}
+
+func (al *ArrayLiteral) String() string {
+	var b strings.Builder
+
+	elements := []string{}
+
+	for _, els := range al.Elements {
+		elements = append(elements, els.String())
+	}
+
+	b.WriteString("[ ")
+	b.WriteString(strings.Join(elements, ", "))
+	b.WriteString(" ]")
+
+	return b.String()
 }
 
 type ReturnStatement struct {

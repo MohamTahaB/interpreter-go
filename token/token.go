@@ -45,6 +45,8 @@ const (
 	RPARENTHESIS = ")"
 	LBRACE       = "{"
 	RBRACE       = "}"
+	LBRACKET     = "["
+	RBRACKET     = "]"
 
 	// Keywords
 	FUNCTION = "FUNCTION"
@@ -76,6 +78,8 @@ var ONE_CHAR_TOKEN_LITTERALS map[byte]bool = map[byte]bool{
 	')': true,
 	'{': true,
 	'}': true,
+	'[': true,
+	']': true,
 	0:   true,
 }
 
@@ -121,6 +125,10 @@ func CharToToken(ch byte) TokenType {
 		tt = LBRACE
 	case '}':
 		tt = RBRACE
+	case '[':
+		tt = LBRACKET
+	case ']':
+		tt = RBRACKET
 	case 0:
 		tt = EOF
 	default:
