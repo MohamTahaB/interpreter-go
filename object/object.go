@@ -9,6 +9,8 @@ import (
 
 type ObjectType string
 
+type BuiltinFunction func(args ...Object) Object
+
 const (
 	INTEGER_OBJ = "INTEGER"
 	BOOLEAN_OBJ = "BOOLEAN"
@@ -19,6 +21,8 @@ const (
 	FUNCTION_OBJ = "FUNCTION"
 
 	STRING_OBJ = "STRING"
+
+	BUILTIN_OBJ = "BUILTIN"
 )
 
 type Object interface {
@@ -65,6 +69,10 @@ type Function struct {
 	Parameters []*ast.Identifier
 	Body       *ast.BlockStatement
 	Env        *Environment
+}
+
+type Builtin struct {
+	Fn BuiltinFunction
 }
 
 func (i *Integer) Inspect() string {
@@ -193,4 +201,16 @@ func (s *String) Inspect() string {
 
 func (s *String) Truthy() bool {
 	return len(s.Value) != 0
+}
+
+func (bi *Builtin) Type() ObjectType {
+	return BUILTIN_OBJ
+}
+
+func (bi *Builtin) Inspect() string {
+	return "builtin function"
+}
+
+func (bi *Builtin) Truthy() bool {
+	return true
 }

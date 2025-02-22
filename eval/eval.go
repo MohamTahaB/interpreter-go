@@ -15,6 +15,8 @@ const (
 	DIVISION_BY_ZERO        = "division by 0"
 	IDENT_NOT_FOUND         = "identifier not found: %s"
 	NOT_A_FUNC              = "not a function: %s"
+	WRONG_NUM_ARGS          = "wrong number of arguments. Got=%d, want=%d"
+	ARG_NOT_SUPPORTED       = "argument to `%s` not supported. Got=%s"
 )
 
 var (
@@ -34,6 +36,27 @@ var (
 		token.LEQ: infixLEQ,
 		token.GT:  infixGT,
 		token.GEQ: infixGEQ,
+	}
+
+	// Define builtin funcs
+	builtins = map[string]*object.Builtin{
+		"len": {
+			Fn: func(args ...object.Object) object.Object {
+				if len(args) != 1 {
+					return newError(WRONG_NUM_ARGS, len(args), 1)
+				}
+
+				switch arg := args[0].(type) {
+				case *object.String:
+					return &object.Integer{
+						Value: int64(len(arg.Value)),
+					}
+
+				default:
+					return newError(ARG_NOT_SUPPORTED, "len", arg.Type())
+				}
+			},
+		},
 	}
 )
 
@@ -203,9 +226,12 @@ func evalConditionalExpression(conditionalExp *ast.IfExpression, env *object.Env
 }
 
 func evalIdentifier(ident *ast.Identifier, env *object.Environment) object.Object {
-	obj, ok := env.Get(ident.Value)
-	if ok {
+	if obj, ok := env.Get(ident.Value); ok {
 		return obj
+	}
+
+	if builtinFunc, ok := builtins[ident.Value]; ok {
+		return builtinFunc
 	}
 
 	return newError(IDENT_NOT_FOUND, ident.Value)
@@ -255,15 +281,19 @@ func evalExpressions(args []ast.Expression, env *object.Environment) []object.Ob
 
 func applyFunction(fn object.Object, args []object.Object) object.Object {
 
-	function, ok := fn.(*object.Function)
-	if !ok {
+	switch fn := fn.(type) {
+	case *object.Function:
+		extendedEnv := extendedFunctionEnv(fn, args)
+		evaluated := Eval(fn.Body, extendedEnv)
+		return unwrapReturnValue(evaluated)
+
+	case *object.Builtin:
+		return fn.Fn(args...)
+
+	default:
 		return newError(NOT_A_FUNC, fn.Type())
 	}
 
-	extendedEnv := extendedFunctionEnv(function, args)
-	evaluated := Eval(function.Body, extendedEnv)
-
-	return unwrapReturnValue(evaluated)
 }
 
 func extendedFunctionEnv(fn *object.Function, args []object.Object) *object.Environment {
