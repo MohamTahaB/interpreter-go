@@ -73,8 +73,9 @@ func TestNextToken_OK(t *testing.T) {
 	five *= 5;
 	five /= 5;
 
-  "foobar"
-  "foo bar"
+    "foobar"
+    "foo bar"
+	[1, 2]
 	`
 
 	l := New(input)
@@ -179,6 +180,11 @@ func TestNextToken_OK(t *testing.T) {
 		{token.SEMICOLON, ";"},
 		{token.STRING, "foobar"},
 		{token.STRING, "foo bar"},
+		{token.LBRACKET, "["},
+		{token.INT, "1"},
+		{token.COMMA, ","},
+		{token.INT, "2"},
+		{token.RBRACKET, "]"},
 		{token.EOF, "\x00"},
 	}
 
