@@ -142,6 +142,23 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 
 		return applyFunction(fn, args)
 
+	case *ast.ArrayLiteral:
+		elements := []object.Object{}
+
+		var eval object.Object
+		for _, element := range node.Elements {
+			eval = Eval(element, env)
+			if isError(eval) {
+				return eval
+			}
+
+			elements = append(elements, eval)
+		}
+
+		return &object.Array{
+			Elements: elements,
+		}
+
 	case *ast.StringLiteral:
 		return &object.String{Value: node.Value}
 	}

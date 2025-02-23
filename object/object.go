@@ -22,6 +22,8 @@ const (
 
 	STRING_OBJ = "STRING"
 
+	ARRAY_OBJ = "ARRAY"
+
 	BUILTIN_OBJ = "BUILTIN"
 )
 
@@ -62,6 +64,10 @@ type Environment struct {
 
 type String struct {
 	Value string
+}
+
+type Array struct {
+	Elements []Object
 }
 
 // Function Object
@@ -201,6 +207,29 @@ func (s *String) Inspect() string {
 
 func (s *String) Truthy() bool {
 	return len(s.Value) != 0
+}
+
+func (a *Array) Type() ObjectType {
+	return ARRAY_OBJ
+}
+
+func (a *Array) Inspect() string {
+	var b strings.Builder
+
+	elements := []string{}
+
+	for _, element := range a.Elements {
+		elements = append(elements, element.Inspect())
+	}
+	b.WriteString("[ ")
+	b.WriteString(strings.Join(elements, ", "))
+	b.WriteString(" ]")
+
+	return b.String()
+}
+
+func (a *Array) Truthy() bool {
+	return len(a.Elements) != 0
 }
 
 func (bi *Builtin) Type() ObjectType {
