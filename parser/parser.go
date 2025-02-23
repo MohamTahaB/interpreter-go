@@ -35,6 +35,7 @@ const (
 	PRODUCT
 	PREFIX
 	CALL
+	INDEX
 )
 
 // TODO: similarly: add the other infix ops later ...
@@ -48,6 +49,7 @@ var precedences = map[token.TokenType]int{
 	token.TIMES:        PRODUCT,
 	token.SLASH:        PRODUCT,
 	token.LPARENTHESIS: CALL,
+	token.LBRACKET:     INDEX,
 }
 
 func New(l *lexer.Lexer) *Parser {
@@ -79,6 +81,8 @@ func New(l *lexer.Lexer) *Parser {
 	p.infixParseFns = make(map[token.TokenType]infixParseFn)
 
 	p.registerInfix(token.LPARENTHESIS, p.parseCallExpression)
+
+	p.registerInfix(token.LBRACKET, p.parseIndexExpression)
 
 	p.registerPrefix(token.STRING, p.parseStringLiteral)
 	infixOperators := []token.TokenType{
@@ -364,6 +368,23 @@ func (p *Parser) parseCallExpression(function ast.Expression) ast.Expression {
 	return exp
 }
 
+func (p *Parser) parseIndexExpression(left ast.Expression) ast.Expression {
+	exp := &ast.IndexExpression{
+		Token: p.currToken,
+		Left:  left,
+	}
+
+	p.nextToken()
+
+	exp.Index = p.parseExpression(LOWEST)
+
+	if !p.expectPeek(token.RBRACKET) {
+		return nil
+	}
+
+	return exp
+}
+
 func (p *Parser) parseBlockStatement() *ast.BlockStatement {
 	block := &ast.BlockStatement{Token: p.currToken,
 		Statements: []ast.Statement{}}
@@ -405,6 +426,7 @@ func (p *Parser) parseCallArguments() []ast.Expression {
 
 	return args
 }
+
 func (p *Parser) parseArrayElements() []ast.Expression {
 	elements := []ast.Expression{}
 

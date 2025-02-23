@@ -2,6 +2,7 @@ package ast
 
 import (
 	"bytes"
+	"fmt"
 	"strings"
 
 	"github.com/MohamTahaB/interpreter-go/token"
@@ -93,6 +94,12 @@ type CallExpression struct {
 	Token     token.Token
 	Function  Expression
 	Arguments []Expression
+}
+
+type IndexExpression struct {
+	Token token.Token
+	Left  Expression
+	Index Expression
 }
 
 func (p *Program) TokenLiteral() string {
@@ -252,6 +259,16 @@ func (ce *CallExpression) String() string {
 	out.WriteString(")")
 
 	return out.String()
+}
+
+func (ie *IndexExpression) expressionNode() {}
+
+func (ie *IndexExpression) TokenLiteral() string {
+	return ie.Token.Literal
+}
+
+func (ie *IndexExpression) String() string {
+	return fmt.Sprintf("(%s[ %s ])", ie.Left.String(), ie.Index.String())
 }
 
 func (fl *FunctionLiteral) expressionNode() {}
