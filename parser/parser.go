@@ -35,6 +35,7 @@ const (
 	PRODUCT
 	PREFIX
 	CALL
+	INDEX
 )
 
 // TODO: similarly: add the other infix ops later ...
@@ -48,6 +49,7 @@ var precedences = map[token.TokenType]int{
 	token.TIMES:        PRODUCT,
 	token.SLASH:        PRODUCT,
 	token.LPARENTHESIS: CALL,
+	token.LBRACKET:     INDEX,
 }
 
 func New(l *lexer.Lexer) *Parser {
@@ -71,7 +73,7 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerPrefix(token.FALSE, p.parseBoolean)
 
 	p.registerPrefix(token.LPARENTHESIS, p.parseGroupedExpression)
-
+	p.registerPrefix(token.LBRACKET, p.parseArrayLiteral)
 	p.registerPrefix(token.IF, p.parseIfExpression)
 
 	p.registerPrefix(token.FUNCTION, p.parseFunctionLiteral)
@@ -79,6 +81,8 @@ func New(l *lexer.Lexer) *Parser {
 	p.infixParseFns = make(map[token.TokenType]infixParseFn)
 
 	p.registerInfix(token.LPARENTHESIS, p.parseCallExpression)
+
+	p.registerInfix(token.LBRACKET, p.parseIndexExpression)
 
 	p.registerPrefix(token.STRING, p.parseStringLiteral)
 	infixOperators := []token.TokenType{
@@ -287,6 +291,16 @@ func (p *Parser) parseGroupedExpression() ast.Expression {
 	return exp
 }
 
+func (p *Parser) parseArrayLiteral() ast.Expression {
+	arr := &ast.ArrayLiteral{
+		Token: p.currToken,
+	}
+
+	arr.Elements = p.parseArrayElements()
+
+	return arr
+}
+
 func (p *Parser) parseIfExpression() ast.Expression {
 	expression := &ast.IfExpression{
 		Token: p.currToken,
@@ -354,6 +368,23 @@ func (p *Parser) parseCallExpression(function ast.Expression) ast.Expression {
 	return exp
 }
 
+func (p *Parser) parseIndexExpression(left ast.Expression) ast.Expression {
+	exp := &ast.IndexExpression{
+		Token: p.currToken,
+		Left:  left,
+	}
+
+	p.nextToken()
+
+	exp.Index = p.parseExpression(LOWEST)
+
+	if !p.expectPeek(token.RBRACKET) {
+		return nil
+	}
+
+	return exp
+}
+
 func (p *Parser) parseBlockStatement() *ast.BlockStatement {
 	block := &ast.BlockStatement{Token: p.currToken,
 		Statements: []ast.Statement{}}
@@ -394,6 +425,31 @@ func (p *Parser) parseCallArguments() []ast.Expression {
 	}
 
 	return args
+}
+
+func (p *Parser) parseArrayElements() []ast.Expression {
+	elements := []ast.Expression{}
+
+	if p.peekTokenIs(token.RBRACKET) {
+		p.nextToken()
+		return elements
+	}
+
+	p.nextToken()
+
+	elements = append(elements, p.parseExpression(LOWEST))
+
+	for p.peekTokenIs(token.COMMA) {
+		p.nextToken()
+		p.nextToken()
+		elements = append(elements, p.parseExpression(LOWEST))
+	}
+
+	if !p.expectPeek(token.RBRACKET) {
+		return nil
+	}
+
+	return elements
 }
 
 func (p *Parser) parseFunctionParameters() []*ast.Identifier {

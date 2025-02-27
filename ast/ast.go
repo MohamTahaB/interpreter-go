@@ -2,6 +2,7 @@ package ast
 
 import (
 	"bytes"
+	"fmt"
 	"strings"
 
 	"github.com/MohamTahaB/interpreter-go/token"
@@ -79,6 +80,11 @@ type StringLiteral struct {
 	Value string
 }
 
+type ArrayLiteral struct {
+	Token    token.Token
+	Elements []Expression
+}
+
 type BlockStatement struct {
 	Token      token.Token
 	Statements []Statement
@@ -88,6 +94,12 @@ type CallExpression struct {
 	Token     token.Token
 	Function  Expression
 	Arguments []Expression
+}
+
+type IndexExpression struct {
+	Token token.Token
+	Left  Expression
+	Index Expression
 }
 
 func (p *Program) TokenLiteral() string {
@@ -249,6 +261,16 @@ func (ce *CallExpression) String() string {
 	return out.String()
 }
 
+func (ie *IndexExpression) expressionNode() {}
+
+func (ie *IndexExpression) TokenLiteral() string {
+	return ie.Token.Literal
+}
+
+func (ie *IndexExpression) String() string {
+	return fmt.Sprintf("(%s[ %s ])", ie.Left.String(), ie.Index.String())
+}
+
 func (fl *FunctionLiteral) expressionNode() {}
 
 func (fl *FunctionLiteral) TokenLiteral() string {
@@ -281,6 +303,28 @@ func (sl *StringLiteral) TokenLiteral() string {
 
 func (sl *StringLiteral) String() string {
 	return sl.Token.Literal
+}
+
+func (al *ArrayLiteral) expressionNode() {}
+
+func (al *ArrayLiteral) TokenLiteral() string {
+	return al.Token.Literal
+}
+
+func (al *ArrayLiteral) String() string {
+	var b strings.Builder
+
+	elements := []string{}
+
+	for _, els := range al.Elements {
+		elements = append(elements, els.String())
+	}
+
+	b.WriteString("[ ")
+	b.WriteString(strings.Join(elements, ", "))
+	b.WriteString(" ]")
+
+	return b.String()
 }
 
 type ReturnStatement struct {
