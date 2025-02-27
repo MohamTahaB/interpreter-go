@@ -53,8 +53,84 @@ var (
 						Value: int64(len(arg.Value)),
 					}
 
+				case *object.Array:
+					return &object.Integer{
+						Value: int64(len(arg.Elements)),
+					}
+
 				default:
 					return newError(ARG_NOT_SUPPORTED, "len", arg.Type())
+				}
+			},
+		},
+
+		"first": {
+			Fn: func(args ...object.Object) object.Object {
+				if len(args) != 1 {
+					return newError(WRONG_NUM_ARGS, len(args), 1)
+				}
+
+				switch arg := args[0].(type) {
+				case *object.Array:
+					if len(arg.Elements) == 0 {
+						return NULL
+					}
+					return arg.Elements[0]
+
+				default:
+					return newError(ARG_NOT_SUPPORTED, "first", arg.Type())
+
+				}
+			},
+		},
+
+		"last": {
+			Fn: func(args ...object.Object) object.Object {
+				if len(args) != 1 {
+					return newError(WRONG_NUM_ARGS, len(args), 1)
+				}
+
+				switch arg := args[0].(type) {
+				case *object.Array:
+					if len(arg.Elements) == 0 {
+						return NULL
+					}
+					return arg.Elements[len(arg.Elements)-1]
+
+				default:
+					return newError(ARG_NOT_SUPPORTED, "last", arg.Type())
+
+				}
+			},
+		},
+
+		"tail": {
+			Fn: func(args ...object.Object) object.Object {
+				if len(args) != 1 {
+					return newError(WRONG_NUM_ARGS, len(args), 1)
+				}
+
+				switch arg := args[0].(type) {
+				case *object.Array:
+					if len(arg.Elements) == 0 {
+						return NULL
+					}
+
+					output := []object.Object{}
+					for idx, element := range arg.Elements {
+						if idx == 0 {
+							continue
+						}
+						output = append(output, element)
+					}
+
+					return &object.Array{
+						Elements: output,
+					}
+
+				default:
+					return newError(ARG_NOT_SUPPORTED, "tail", arg.Type())
+
 				}
 			},
 		},
