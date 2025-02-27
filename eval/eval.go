@@ -17,6 +17,7 @@ const (
 	NOT_A_FUNC              = "not a function: %s"
 	WRONG_NUM_ARGS          = "wrong number of arguments. Got=%d, want=%d"
 	ARG_NOT_SUPPORTED       = "argument to `%s` not supported. Got=%s"
+	INDEX_OP_NOT_SUPPORTED  = "index operator not supported: %s"
 )
 
 var (
@@ -161,6 +162,17 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 
 	case *ast.StringLiteral:
 		return &object.String{Value: node.Value}
+
+	case *ast.IndexExpression:
+		left := Eval(node.Left, env)
+		if isError(left) {
+			return left
+		}
+		index := Eval(node.Index, env)
+		if isError(index) {
+			return index
+		}
+		return evalIndexExpression(left, index)
 	}
 
 	return NULL
@@ -294,6 +306,27 @@ func evalExpressions(args []ast.Expression, env *object.Environment) []object.Ob
 	}
 
 	return argsEval
+}
+
+func evalIndexExpression(left, index object.Object) object.Object {
+	switch {
+	case left.Type() == object.ARRAY_OBJ && index.Type() == object.INTEGER_OBJ:
+		return evalArrayIndexExpression(left, index)
+
+	default:
+		return newError(INDEX_OP_NOT_SUPPORTED, left.Type())
+	}
+}
+
+func evalArrayIndexExpression(left, index object.Object) object.Object {
+	leftArray := left.(*object.Array)
+	indexInt := index.(*object.Integer).Value
+
+	if indexInt < 0 || indexInt >= int64(len(leftArray.Elements)) {
+		return NULL
+	}
+
+	return leftArray.Elements[indexInt]
 }
 
 func applyFunction(fn object.Object, args []object.Object) object.Object {
