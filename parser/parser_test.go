@@ -330,6 +330,14 @@ func TestOperatorPrecedenceParsing(t *testing.T) {
 			"add(a + b + c * d / f + g)",
 			"add((((a + b) + ((c * d) / f)) + g))",
 		},
+		{
+			"a * [1, 2, 3, 4][b * c] * d",
+			"((a * ([ 1, 2, 3, 4 ][ (b * c) ])) * d)",
+		},
+		{
+			"add(a * b[2], b[1], 2 * [1, 2][1])",
+			"add((a * (b[ 2 ])), (b[ 1 ]), (2 * ([ 1, 2 ][ 1 ])))",
+		},
 	}
 	for _, tt := range tests {
 		l := lexer.New(tt.input)
@@ -659,6 +667,75 @@ func TestStringLiteralExpression(t *testing.T) {
 	if literal.Value != "hello world" {
 		t.Errorf("literal.Value not %q. Got=%q", "hello world", literal.Value)
 	}
+}
+
+func TestParsingArrayLiterals(t *testing.T) {
+	input := "[ 1, 2*2, 3+3 ]"
+
+	l := lexer.New(input)
+	p := New(l)
+
+	program := p.ParseProgram()
+
+	checkParserErrors(t, p)
+
+	if len(program.Statements) != 1 {
+		t.Fatalf("wrong statements found. Expected=%d, got=%d", 1, len(program.Statements))
+	}
+
+	stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("statement is not an ast.ExpressionStatement. Got=%T", program.Statements[0])
+	}
+
+	expr, ok := stmt.Expression.(*ast.ArrayLiteral)
+	if !ok {
+		t.Fatalf("statement is not an ast.ArrayLiteral. Got=%T", stmt.Expression)
+	}
+
+	if len(expr.Elements) != 3 {
+		t.Fatalf("wrong ArrayLiteral Expression. Expected=%d element(s), got=%d", 3, len(expr.Elements))
+	}
+
+	testIntegerLiteral(t, expr.Elements[0], 1)
+	testInfixExpression(t, expr.Elements[1], 2, "*", 2)
+	testInfixExpression(t, expr.Elements[2], 3, "+", 3)
+}
+
+func TestIndexExpression(t *testing.T) {
+	input := "array[1+1]"
+
+	l := lexer.New(input)
+	p := New(l)
+	program := p.ParseProgram()
+
+	checkParserErrors(t, p)
+
+	if len(program.Statements) != 1 {
+		t.Fatalf("Program statements wrong. Exprected=%d, got=%d", 1, len(program.Statements))
+	}
+
+	stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("Statement is not an expression statement. Got=%T", program.Statements[0])
+	}
+
+	indexExpression, ok := stmt.Expression.(*ast.IndexExpression)
+	if !ok {
+		t.Fatalf("expression is not an index expression. Got=%T", stmt.Expression)
+	}
+
+	// test the ident first
+	ident, ok := indexExpression.Left.(*ast.Identifier)
+	if !ok {
+		t.Errorf("left is not an identifier. Got=%T", indexExpression.Left)
+	}
+
+	if ident.String() != "array" {
+		t.Errorf("left wrong. Expected=%s, got=%s", "array", ident.String())
+	}
+
+	testInfixExpression(t, indexExpression.Index, 1, "+", 1)
 }
 
 func testLetStatement(t *testing.T, s ast.Statement, name string) bool {

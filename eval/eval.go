@@ -15,6 +15,9 @@ const (
 	DIVISION_BY_ZERO        = "division by 0"
 	IDENT_NOT_FOUND         = "identifier not found: %s"
 	NOT_A_FUNC              = "not a function: %s"
+	WRONG_NUM_ARGS          = "wrong number of arguments. Got=%d, want=%d"
+	ARG_NOT_SUPPORTED       = "argument to `%s` not supported. Got=%s"
+	INDEX_OP_NOT_SUPPORTED  = "index operator not supported: %s"
 )
 
 var (
@@ -34,6 +37,103 @@ var (
 		token.LEQ: infixLEQ,
 		token.GT:  infixGT,
 		token.GEQ: infixGEQ,
+	}
+
+	// Define builtin funcs
+	builtins = map[string]*object.Builtin{
+		"len": {
+			Fn: func(args ...object.Object) object.Object {
+				if len(args) != 1 {
+					return newError(WRONG_NUM_ARGS, len(args), 1)
+				}
+
+				switch arg := args[0].(type) {
+				case *object.String:
+					return &object.Integer{
+						Value: int64(len(arg.Value)),
+					}
+
+				case *object.Array:
+					return &object.Integer{
+						Value: int64(len(arg.Elements)),
+					}
+
+				default:
+					return newError(ARG_NOT_SUPPORTED, "len", arg.Type())
+				}
+			},
+		},
+
+		"first": {
+			Fn: func(args ...object.Object) object.Object {
+				if len(args) != 1 {
+					return newError(WRONG_NUM_ARGS, len(args), 1)
+				}
+
+				switch arg := args[0].(type) {
+				case *object.Array:
+					if len(arg.Elements) == 0 {
+						return NULL
+					}
+					return arg.Elements[0]
+
+				default:
+					return newError(ARG_NOT_SUPPORTED, "first", arg.Type())
+
+				}
+			},
+		},
+
+		"last": {
+			Fn: func(args ...object.Object) object.Object {
+				if len(args) != 1 {
+					return newError(WRONG_NUM_ARGS, len(args), 1)
+				}
+
+				switch arg := args[0].(type) {
+				case *object.Array:
+					if len(arg.Elements) == 0 {
+						return NULL
+					}
+					return arg.Elements[len(arg.Elements)-1]
+
+				default:
+					return newError(ARG_NOT_SUPPORTED, "last", arg.Type())
+
+				}
+			},
+		},
+
+		"tail": {
+			Fn: func(args ...object.Object) object.Object {
+				if len(args) != 1 {
+					return newError(WRONG_NUM_ARGS, len(args), 1)
+				}
+
+				switch arg := args[0].(type) {
+				case *object.Array:
+					if len(arg.Elements) == 0 {
+						return NULL
+					}
+
+					output := []object.Object{}
+					for idx, element := range arg.Elements {
+						if idx == 0 {
+							continue
+						}
+						output = append(output, element)
+					}
+
+					return &object.Array{
+						Elements: output,
+					}
+
+				default:
+					return newError(ARG_NOT_SUPPORTED, "tail", arg.Type())
+
+				}
+			},
+		},
 	}
 )
 
@@ -119,8 +219,36 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 
 		return applyFunction(fn, args)
 
+	case *ast.ArrayLiteral:
+		elements := []object.Object{}
+
+		var eval object.Object
+		for _, element := range node.Elements {
+			eval = Eval(element, env)
+			if isError(eval) {
+				return eval
+			}
+
+			elements = append(elements, eval)
+		}
+
+		return &object.Array{
+			Elements: elements,
+		}
+
 	case *ast.StringLiteral:
 		return &object.String{Value: node.Value}
+
+	case *ast.IndexExpression:
+		left := Eval(node.Left, env)
+		if isError(left) {
+			return left
+		}
+		index := Eval(node.Index, env)
+		if isError(index) {
+			return index
+		}
+		return evalIndexExpression(left, index)
 	}
 
 	return NULL
@@ -203,9 +331,12 @@ func evalConditionalExpression(conditionalExp *ast.IfExpression, env *object.Env
 }
 
 func evalIdentifier(ident *ast.Identifier, env *object.Environment) object.Object {
-	obj, ok := env.Get(ident.Value)
-	if ok {
+	if obj, ok := env.Get(ident.Value); ok {
 		return obj
+	}
+
+	if builtinFunc, ok := builtins[ident.Value]; ok {
+		return builtinFunc
 	}
 
 	return newError(IDENT_NOT_FOUND, ident.Value)
@@ -253,17 +384,42 @@ func evalExpressions(args []ast.Expression, env *object.Environment) []object.Ob
 	return argsEval
 }
 
+func evalIndexExpression(left, index object.Object) object.Object {
+	switch {
+	case left.Type() == object.ARRAY_OBJ && index.Type() == object.INTEGER_OBJ:
+		return evalArrayIndexExpression(left, index)
+
+	default:
+		return newError(INDEX_OP_NOT_SUPPORTED, left.Type())
+	}
+}
+
+func evalArrayIndexExpression(left, index object.Object) object.Object {
+	leftArray := left.(*object.Array)
+	indexInt := index.(*object.Integer).Value
+
+	if indexInt < 0 || indexInt >= int64(len(leftArray.Elements)) {
+		return NULL
+	}
+
+	return leftArray.Elements[indexInt]
+}
+
 func applyFunction(fn object.Object, args []object.Object) object.Object {
 
-	function, ok := fn.(*object.Function)
-	if !ok {
+	switch fn := fn.(type) {
+	case *object.Function:
+		extendedEnv := extendedFunctionEnv(fn, args)
+		evaluated := Eval(fn.Body, extendedEnv)
+		return unwrapReturnValue(evaluated)
+
+	case *object.Builtin:
+		return fn.Fn(args...)
+
+	default:
 		return newError(NOT_A_FUNC, fn.Type())
 	}
 
-	extendedEnv := extendedFunctionEnv(function, args)
-	evaluated := Eval(function.Body, extendedEnv)
-
-	return unwrapReturnValue(evaluated)
 }
 
 func extendedFunctionEnv(fn *object.Function, args []object.Object) *object.Environment {
