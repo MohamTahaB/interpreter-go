@@ -40,6 +40,7 @@ const (
 	// Delimiters
 	COMMA     = ","
 	SEMICOLON = ";"
+	COLON     = ":"
 
 	LPARENTHESIS = "("
 	RPARENTHESIS = ")"
@@ -80,6 +81,7 @@ var ONE_CHAR_TOKEN_LITTERALS map[byte]bool = map[byte]bool{
 	'}': true,
 	'[': true,
 	']': true,
+	':': true,
 	0:   true,
 }
 
@@ -117,6 +119,8 @@ func CharToToken(ch byte) TokenType {
 		tt = COMMA
 	case ';':
 		tt = SEMICOLON
+	case ':':
+		tt = COLON
 	case '(':
 		tt = LPARENTHESIS
 	case ')':
